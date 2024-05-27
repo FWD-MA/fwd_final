@@ -1,0 +1,23 @@
+server:
+    port: 8080
+
+
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+    password: 123456
+    url: jdbc:mysql://localhost:3307/fwd_ma?autoReconnect=true&useUnicode=true&useSSL=false
+
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+
+# application.yml
+ssh:
+  client:
+    host: 8.134.254.60
+    port: 22
+    username: root
+    private-key-path: E:\wechatfiles\WeChat Files\wxid_nwd04qm5ijh822\FileStorage\File\2024-04\Hackethon
