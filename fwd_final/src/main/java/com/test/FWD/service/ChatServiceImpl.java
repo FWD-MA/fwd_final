@@ -13,6 +13,7 @@ import com.alibaba.dashscope.exception.ApiException;
 import com.alibaba.dashscope.exception.InputRequiredException;
 import com.alibaba.dashscope.exception.NoApiKeyException;
 import com.alibaba.fastjson.JSONObject;
+import java.security.SecureRandom;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.test.FWD.comm.SamplePoster;
@@ -48,7 +49,7 @@ public class ChatServiceImpl implements ChatService{
         return content;
     }
     @Override
-    public String createImageCompletion(HttpServletRequest request, HttpServletResponse response,String size) {
+    public String createImageCompletion(HttpServletRequest request, HttpServletResponse response,String size,String image) {
         try{
             String labal = request.getParameter("labal");
             String prompt = request.getParameter("prompt");
@@ -71,12 +72,13 @@ public class ChatServiceImpl implements ChatService{
 
             ImageSynthesis gen = new ImageSynthesis();
             ImageSynthesisParam param = ImageSynthesisParam.builder()
-                            .model(ImageSynthesis.Models.WANX_V1)
-                            .n(1)
-                            .size(size)
-                            .prompt(prompt+prompt1)
-                            .apiKey("sk-eb07a7232b0e4dbaa7d1f4ceec13965b")
-                            .build();
+                    .model(ImageSynthesis.Models.WANX_V1)
+                    .n(1)
+                    .size(size)
+                    .prompt(prompt+prompt1)
+                    .apiKey("sk-eb07a7232b0e4dbaa7d1f4ceec13965b")
+                    .refImage(image)
+                    .build();
             ImageSynthesisResult result = gen.call(param);
             List <Map<String,String>> urlList = new ArrayList<>();
             urlList = result.getOutput().getResults();
@@ -110,8 +112,9 @@ public class ChatServiceImpl implements ChatService{
             Message systemMsg2 = Message.builder().role(user).content(prompt == null ? " " :prompt.toString()).build();
             messages.add(systemMsg2);
             StringBuilder fileContentString = new StringBuilder();
-            if (ServletFileUpload.isMultipartContent(request)){
-                Part filePart1 = request.getPart("files[0]");
+            //文档
+            Part filePart1 = request.getPart("files[0]");
+            if(filePart1 != null){
                 InputStream fileContent = filePart1.getInputStream();
                 BufferedReader reader = new BufferedReader(new InputStreamReader(fileContent));
                 String line = null;
@@ -152,6 +155,7 @@ public class ChatServiceImpl implements ChatService{
 
     public String createPosterCompletion(HttpServletRequest request, HttpServletResponse response){
         try{
+            final String URL = "http://127.0.0.1:8080/";
             String content = request.getParameter("content");
             String selectedHoliday = request.getParameter("selectedHoliday");
             String selectedCountry = request.getParameter("selectedCountry");
@@ -159,17 +163,34 @@ public class ChatServiceImpl implements ChatService{
             String style = request.getParameter("style");
             String otherRequirements = request.getParameter("otherRequirements");
             String solgan = sloganGen(selectedHoliday,selectedCountry,targetObject);
-            URL imageUrl = new URL(createImageCompletion(request,response,"720*1280"));
+            //相似图片
+            Part SimilarStyleImage = request.getPart("files[1]");
+            URL imageUrl= new URL(createImageCompletion(request,response,"720*1280",null));
+//            if(SimilarStyleImage!=null){
+//                String imageName = SimilarStyleImage.getSubmittedFileName();
+//                SimilarStyleImage.write(ClassUtils.getDefaultClassLoader().getResource("static").getPath() + imageName);
+//                imageUrl = new URL(createImageCompletion(request,response,"720*1280",URL+File.separator+imageName));
+//            }else{
+//                imageUrl = new URL(createImageCompletion(request,response,"720*1280",null));
+//            }
             BufferedImage background = ImageIO.read(imageUrl);
-            //File codeImage = new File(ResourceLoader.class.getResource("code.png").getFile());
-            //File codeImage = new File("/root/jar/code.png");
-            InputStream codeImage = this.getClass().getClassLoader().getResourceAsStream("code.png");
+            //二维码
+            Part uploadCodeImage = request.getPart("files[0]");
+            File codeImage;
+            if(uploadCodeImage!=null){
+                String codeName = uploadCodeImage.getSubmittedFileName();
+                uploadCodeImage.write(ClassUtils.getDefaultClassLoader().getResource("static").getPath() + codeName);
+                codeImage = new File(ClassUtils.getDefaultClassLoader().getResource("static").getPath() + codeName);
+            }else{
+                codeImage = new File(ResourceLoader.class.getResource("/static/code.png").getFile());
+            }
             BufferedImage code = ImageIO.read(codeImage);
-            //BufferedImage logo = ImageIO.read();
             int i = 0;
             for (; i < solgan.length(); i++) {
                 if (solgan.charAt(i)=='，') break;
             }
+
+
             SamplePoster poster = SamplePoster.builder()
                     .backgroundImage(background)
                     .head(null)
@@ -181,27 +202,21 @@ public class ChatServiceImpl implements ChatService{
             BufferedImage AiPoster = impl.annotationDrawPoster(poster).draw(null);
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             ImageIO.write(AiPoster,"png",outputStream);
-            //ImageIO.write(AiPoster,"png",new FileOutputStream("annTest.png"));
+            String path = ClassUtils.getDefaultClassLoader().getResource("static").getPath();
+            ImageIO.write(AiPoster,"png",new FileOutputStream(path+"/PosterTest.png"));
 
-            //String path = ClassUtils.getDefaultClassLoader().getResource("static").getPath();
-            String outputDir = new File(".").getCanonicalPath();
-            System.out.println("Output directory: " + outputDir);
-            ImageIO.write(AiPoster,"png",new FileOutputStream(outputDir+"/PosterTest.png"));
-
-            final String URL = "http://localhost:8080/";
             String url_path = File.separator+"PosterTest.png";
-
-            String base64Image = Base64.getEncoder().encodeToString(outputStream.toByteArray());
             return URL+url_path;
 
 
         }catch(MalformedURLException e){
-
-            return null;
+            throw new RuntimeException(e);
         }catch(IOException e) {
-            return null;
+            throw new RuntimeException(e);
         }catch(IllegalAccessException e) {
-            return null;
+            throw new RuntimeException(e);
+        }catch (ServletException e) {
+            throw new RuntimeException(e);
         }
 
     }
@@ -209,12 +224,20 @@ public class ChatServiceImpl implements ChatService{
     public String sloganGen(String selectedHoliday,String selectedCountry,String targetObject) {
         try{
             StringBuilder prompt = new StringBuilder();
-            prompt.append("请生成一个12字以内在"+selectedCountry).append("的"+selectedHoliday+",").append("面对"+targetObject).append("的保险宣传标语");
+            prompt.append("请重新生成一个12字以内在"+selectedCountry).append("的"+selectedHoliday+",").append("面对"+targetObject).append("的保险宣传标语");
             Generation gen = new Generation();
+            SecureRandom random = new SecureRandom();
+
+            // 生成一个32位的无符号长整数
+            //long random32BitNumber = random.nextLong() & 0x7FFFFFFFFL;
+            //Integer seed = Integer.valueOf((int) random32BitNumber);
+            int num = random.nextInt(999999999);
+            Integer seed = Integer.valueOf(num);
             QwenParam param = QwenParam.builder()
                     .model("qwen-turbo")
                     .apiKey("sk-eb07a7232b0e4dbaa7d1f4ceec13965b")
                     .prompt(prompt.toString())
+                    .seed(seed)
                     .topP(0.8).build();
             GenerationResult result = gen.call(param);
             System.out.println(prompt.toString());

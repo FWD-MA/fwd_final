@@ -31,13 +31,13 @@ public class SamplePoster extends AbstractDefaultPoster {
     /**
      * 昵称
      */
-    @PosterFontCss(position = {50,1110}, size = 45,color = {255,255,255})
+    @PosterFontCss(position = {38,1190}, size = 40,color = {255,255,255})
     private String nickName;
 
     /**
      * 广告语
      */
-    @PosterFontCss(position = {50,1024},center = true, size = 60, color = {255,255,255}, canNewLine={0,200,1})
+    @PosterFontCss(position = {50,1084},center = true, size = 60, color = {255,255,255}, canNewLine={0,200,1})
     private String slogan;
 
     /**
