@@ -202,8 +202,12 @@ public class ChatServiceImpl implements ChatService{
             BufferedImage AiPoster = impl.annotationDrawPoster(poster).draw(null);
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             ImageIO.write(AiPoster,"png",outputStream);
-            String path = ClassUtils.getDefaultClassLoader().getResource("static").getPath();
-            ImageIO.write(AiPoster,"png",new FileOutputStream(path+"/PosterTest.png"));
+            //String path = ClassUtils.getDefaultClassLoader().getResource("static").getPath();
+
+            //ImageIO.write(AiPoster,"png",new FileOutputStream(path+"/PosterTest.png"));
+            String outputDir = new File(".").getCanonicalPath();
+            System.out.println("Output directory: " + outputDir);
+            ImageIO.write(AiPoster,"png",new FileOutputStream(outputDir+"/PosterTest.png"));
 
             String url_path = File.separator+"PosterTest.png";
             return URL+url_path;
