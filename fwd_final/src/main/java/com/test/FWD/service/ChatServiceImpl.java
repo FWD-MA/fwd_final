@@ -161,7 +161,9 @@ public class ChatServiceImpl implements ChatService{
             String solgan = sloganGen(selectedHoliday,selectedCountry,targetObject);
             URL imageUrl = new URL(createImageCompletion(request,response,"720*1280"));
             BufferedImage background = ImageIO.read(imageUrl);
-            File codeImage = new File(ResourceLoader.class.getResource("/static/code.png").getFile());
+            //File codeImage = new File(ResourceLoader.class.getResource("code.png").getFile());
+            //File codeImage = new File("/root/jar/code.png");
+            InputStream codeImage = this.getClass().getClassLoader().getResourceAsStream("code.png");
             BufferedImage code = ImageIO.read(codeImage);
             //BufferedImage logo = ImageIO.read();
             int i = 0;
@@ -181,8 +183,11 @@ public class ChatServiceImpl implements ChatService{
             ImageIO.write(AiPoster,"png",outputStream);
             //ImageIO.write(AiPoster,"png",new FileOutputStream("annTest.png"));
 
-            String path = ClassUtils.getDefaultClassLoader().getResource("static").getPath();
-            ImageIO.write(AiPoster,"png",new FileOutputStream(path+"/PosterTest.png"));
+            //String path = ClassUtils.getDefaultClassLoader().getResource("static").getPath();
+            String outputDir = new File(".").getCanonicalPath();
+            System.out.println("Output directory: " + outputDir);
+            ImageIO.write(AiPoster,"png",new FileOutputStream(outputDir+"/PosterTest.png"));
+
             final String URL = "http://localhost:8080/";
             String url_path = File.separator+"PosterTest.png";
 
